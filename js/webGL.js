@@ -189,23 +189,29 @@ function animate() {
     var timeNow = new Date().getTime();
     if (lastTime != 0) {
         var elapsed = timeNow - lastTime;
-        mat4.rotate(meshes.suzzane.objMatrix, elapsed/1000, [1,0,0]);
-        console.log("fired");
     }
     lastTime = timeNow;
 }
 
-
+var mouse = new Mouse();
 
 window.onload = function(){
     var canvas = document.getElementById("GLCanvas");
     canvas.width = innerWidth;
     canvas.height = innerHeight;
-/*
-    canvas.onmousedown = handleMouseDown;
-    document.onmouseup = handleMouseUp;
-    document.onmousemousemove = handleMouseDown;
-    */
+
+    
+    window.onmousedown = function () {
+        mouse.handleMouseDown();
+    }
+    window.onmouseup = function () {
+        mouse.handleMouseUp();
+    }
+    // anoymous function to get this to work!
+    window.onmousemove = function () {
+        mouse.handleMouseMove();
+    };
+    
 
     OBJ.downloadMeshes({
         'suzzane': 'suzzane.obj',
@@ -218,7 +224,7 @@ window.onload = function(){
         TextureImage.onload = function(){
             Texture = GL.LoadTexture(TextureImage);
             meshes.suzzane.objMatrix = mat4.identity(mat4.create());
-            mat4.translate(meshes.suzzane.objMatrix,  [0.0, 0.0, -5.0]);
+            mat4.translate(pMatrix,  [0.0, 0.0, -5.0]);
             GL.Draw(meshes.suzzane, Texture);
             tick();
 
@@ -231,11 +237,41 @@ function Mouse() {
     this.lastMouseX = null;    
     this.lastMouseY = null;
     this.mouseDown = false;
+    
+    this.handleMouseDown = function () {
+        this.mouseDown = true;
+        this.lastMouseX = event.clientX;
+        this.lastMouseY = event.clientY;
+    }
+    this.handleMouseUp = function () {
+        this.mouseDown = false;
+    }
+
+    this.handleMouseMove = function () {
+
+        if (!this.mouseDown) {
+            return;
+        }
+        var newX = event.clientX;
+        var newY = event.clientY;
+
+        var deltaX = newX - this.lastMouseX
+        var newRotationMatrix = mat4.create();
+        mat4.identity(newRotationMatrix);
+        mat4.rotate(newRotationMatrix, degToRad(deltaX / 10), [0, 1, 0]);
+
+        var deltaY = newY - this.lastMouseY;
+        mat4.rotate(newRotationMatrix, degToRad(deltaY / 10), [1, 0, 0]);
+
+        mat4.multiply(newRotationMatrix, meshes.suzzane.objMatrix, meshes.suzzane.objMatrix);
+
+        this.lastMouseX = newX
+        this.lastMouseY = newY;
+
+    }
 }
 
-Mouse.handleMouseDown = function () {
-    this.mouseDown = true;
-    this.lastMouseX = event.clientX;
-    this.lastMouseY = event.clientY;
-
+function degToRad(degrees) {
+    return degrees * Math.PI / 180;
 }
+
