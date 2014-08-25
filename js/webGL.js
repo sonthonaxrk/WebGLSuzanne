@@ -223,7 +223,7 @@ window.onload = function(){
             tick();
 
         };
-        TextureImage.src = "ao.png";
+        TextureImage.src = "images/ao.png";
     }
 }
 
