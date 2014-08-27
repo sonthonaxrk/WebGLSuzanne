@@ -70,10 +70,15 @@ function WebGL(CID, FSID, VSID) {
 			// link vetex pos attr from shader
             this.VertexPosition = this.GL.getAttribLocation(this.ShaderProgram, "VertexPosition");
             this.GL.enableVertexAttribArray(this.VertexPosition);
-     
-    //Link Texture Coordinate Attribute from Shader
+
+            this.VertexNormal = this.GL.getAttribLocation(this.ShaderProgram, "VertexNormal");
+            this.GL.enableVertexAttribArray(this.VertexNormal);
+
+
             this.VertexTexture = this.GL.getAttribLocation(this.ShaderProgram, "TextureCoord");
             this.GL.enableVertexAttribArray(this.VertexTexture);
+
+
 		}
 	}
 
@@ -96,6 +101,13 @@ function WebGL(CID, FSID, VSID) {
             this.GL.bufferData(this.GL.ARRAY_BUFFER, new Float32Array(Object.textures), this.GL.STATIC_DRAW);
             this.GL.vertexAttribPointer(this.VertexTexture, 2, this.GL.FLOAT, false, 0, 0);
             
+
+            var VertexNormalBuffer = this.GL.createBuffer();
+            this.GL.bindBuffer(this.GL.ARRAY_BUFFER, VertexNormalBuffer);
+            this.GL.bufferData(this.GL.ARRAY_BUFFER, new Float32Array(Object.vertexNormals), this.GL.STATIC_DRAW);
+            this.GL.vertexAttribPointer(this.VertexNormal, 3, this.GL.FLOAT, false, 0, 0);
+
+
             var TriangleBuffer = this.GL.createBuffer();
             this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, TriangleBuffer);
             this.GL.bufferData(this.GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(Object.indices), this.GL.STATIC_DRAW);
@@ -114,6 +126,15 @@ function WebGL(CID, FSID, VSID) {
             var perMatrix = this.GL.getUniformLocation(this.ShaderProgram, "PerspectiveMatrix");  
             this.GL.uniformMatrix4fv(perMatrix, false, new Float32Array(pMatrix));
             
+            var normalMatrix = mat3.create();
+            mat4.toInverseMat3(Object.objMatrix, normalMatrix);
+            mat3.transpose(normalMatrix);
+
+
+            var norMatrix = this.GL.getUniformLocation(this.ShaderProgram, "NormalMatrix");  
+            this.GL.uniformMatrix3fv(norMatrix, false, new Float32Array(normalMatrix));
+
+
 
             var transMatrix = this.GL.getUniformLocation(this.ShaderProgram, "TransformationMatrix");  
             this.GL.uniformMatrix4fv(transMatrix, false, new Float32Array(Object.objMatrix));  

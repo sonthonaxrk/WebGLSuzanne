@@ -17,27 +17,39 @@
    
     attribute highp vec3 VertexPosition;
     attribute highp vec2 TextureCoord;
-     
+    attribute highp vec3 VertexNormal;
      
     uniform highp mat4 TransformationMatrix;
     uniform highp mat4 PerspectiveMatrix;
+    uniform mat3 NormalMatrix;
      
     varying highp vec2 vTextureCoord;
+    varying highp vec3 vLightWeighting;
      
     void main(void) {
         gl_Position = PerspectiveMatrix * TransformationMatrix * vec4(VertexPosition, 1.0);
         vTextureCoord = TextureCoord;
+
+
+
+        vec3 transformedNormal = NormalMatrix * VertexNormal;
+
+        float directionalLightWeighting = max(dot(transformedNormal, vec3(1.0,-1.0,1.0)), 0.0);
+
+        vLightWeighting = directionalLightWeighting * vec3(1.0,1.0,1.0) ;
+
     }
 </script>
  
 <script id="FragmentShader" type="x-shader/x-fragment"> 
     varying highp vec2 vTextureCoord;
-     
+    varying highp vec3 vLightWeighting;
+   
     uniform sampler2D uSampler;
-     
+    
     void main(void) {
         highp vec4 texelColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
-        gl_FragColor = texelColor;
+        gl_FragColor =vec4(texelColor.rgb*vLightWeighting, 1.0);
     }     
 </script>
 

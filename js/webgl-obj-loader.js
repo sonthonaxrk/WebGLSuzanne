@@ -1,5 +1,33 @@
 (function (window, document, undefined) {
   'use strict';
+
+    function vecSub(vec1, vec2) {
+        var newArray = vec1.slice(0);
+        for (var i = 0; i<newArray.length; i++) {
+            newArray[i] = newArray[i]-vec2[i]; 
+        }
+        return newArray;
+    };
+
+    function vecAdd(vec1, vec2) {
+        var newArray = vec1.slice(0);
+        for (var i = 0; i<newArray.length; i++) {
+            newArray[i] = newArray[i]-vec2[i]; 
+        }
+        return newArray;
+    };
+
+
+    function vecScalarMul(vec1, scalar) {
+        var newArray = vec1.slice(0);
+        for (var i = 0; i<newArray.length; i++) {
+            newArray[i] = newArray[i]*scalar; 
+        }
+        return newArray;
+    };
+
+
+
   // Thanks to CMS for the startsWith function
   // http://stackoverflow.com/questions/646628/javascript-startswith/646643#646643
   if (typeof String.prototype.startsWith !== 'function') {
@@ -207,10 +235,83 @@
         }
       }
     }
+    // these are indexed
     this.vertices = unpacked.verts;
     this.vertexNormals = unpacked.norms;
     this.textures = unpacked.textures;
     this.indices = unpacked.indices;
+
+    unpacked.tangents = [];
+    unpacked.bitangents = [];
+
+   
+    for (var location = 0; location<this.indices.length; location+=3) {
+        var index = this.indices[location];
+
+        var v0 = this.vertices.slice(index*3, (index*3)+3);
+        var uv0 = this.textures.slice(index*2, (index*2)+2);
+
+        index=this.indices[location+1];
+        
+        var v1 = this.vertices.slice(index*3, (index*3)+3);
+        var uv1 = this.textures.slice(index*2, (index*2)+2);
+        
+        index=this.indices[location+2];
+        
+        var v2 = this.vertices.slice(index*3, (index*3)+3);
+        var uv2 = this.textures.slice(index*2, (index*2)+2);
+
+        var deltaPos1 = vecSub(v1, v0);
+        var deltaPos2 = vecSub(v2, v0);
+
+        var deltaUV1 = vecSub(uv1, uv0);
+        var deltaUV2 = vecSub(uv2, uv0);
+
+        var r = 1/((deltaUV1[0] * deltaUV2[1]) - (deltaUV1[1] * deltaUV2[0]));
+
+
+
+        var tangent = vecScalarMul(
+            vecSub(
+                vecScalarMul(deltaPos1, deltaUV2[1]), vecScalarMul(deltaPos2, deltaUV2[1])
+                ),
+            r
+        );
+
+        var bitangent = vecScalarMul(
+            vecSub(
+                vecScalarMul(deltaPos2, deltaUV2[0]), vecScalarMul(deltaPos1, deltaUV2[0])
+                ),
+            r
+        );
+
+        for (var v = 0; v < 3; v++) {
+            var addTo = this.indices[location+v];
+            if (typeof unpacked.tangents[addTo] != "undefined") {
+                // if vector already added average it
+                unpacked.tangents[addTo] = vecScalarMul(vecAdd(unpacked.tangents[addTo], tangent), 0.5);
+                unpacked.bitangents[addTo] = vecScalarMul(vecAdd(unpacked.bitangents[addTo], bitangent), 0.5);
+
+            } else {
+                // create array instance
+                unpacked.tangents[addTo] =tangent;
+                unpacked.bitangents[addTo] =bitangent;
+
+            }
+        }
+    }
+
+    this.tangents = [];
+    this.bitangents = [];
+
+
+    for(var i = 0; i < unpacked.tangents.length; i++) {
+        this.tangents = this.tangents.concat(unpacked.tangents[i]);
+        this.bitangents = this.bitangents.concat(unpacked.bitangents[i]);
+    }
+
+
+
   }
 
   var Ajax = function(){
@@ -369,6 +470,20 @@
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.vertices), gl.STATIC_DRAW);
     mesh.vertexBuffer.itemSize = 3;
     mesh.vertexBuffer.numItems = mesh.vertices.length / 3;
+
+
+    mesh.tangentBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.tangentBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.tangents), gl.STATIC_DRAW);
+    mesh.tangentBuffer.itemSize = 3;
+    mesh.tangentBuffer.numItems = mesh.tangents.length / 3;
+
+
+    mesh.bitangentBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.bitangentBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.bitangents), gl.STATIC_DRAW);
+    mesh.bitangentBuffer.itemSize = 3;
+    mesh.bitangentBuffer.numItems = mesh.bitangents.length / 3;
 
     mesh.indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
