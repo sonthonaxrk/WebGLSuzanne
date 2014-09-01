@@ -12,7 +12,7 @@
     function vecAdd(vec1, vec2) {
         var newArray = vec1.slice(0);
         for (var i = 0; i<newArray.length; i++) {
-            newArray[i] = newArray[i]-vec2[i]; 
+            newArray[i] = newArray[i]+vec2[i]; 
         }
         return newArray;
     };
@@ -273,24 +273,28 @@
 
         var tangent = vecScalarMul(
             vecSub(
-                vecScalarMul(deltaPos1, deltaUV2[1]), vecScalarMul(deltaPos2, deltaUV2[1])
+                vecScalarMul(deltaPos1, deltaUV2[1]), vecScalarMul(deltaPos2, deltaUV1[1])
                 ),
             r
         );
 
         var bitangent = vecScalarMul(
             vecSub(
-                vecScalarMul(deltaPos2, deltaUV2[0]), vecScalarMul(deltaPos1, deltaUV2[0])
+                vecScalarMul(deltaPos2, deltaUV1[0]), vecScalarMul(deltaPos1, deltaUV2[0])
                 ),
-            r
+            -r
         );
 
         for (var v = 0; v < 3; v++) {
             var addTo = this.indices[location+v];
             if (typeof unpacked.tangents[addTo] != "undefined") {
                 // if vector already added average it
-                unpacked.tangents[addTo] = vecScalarMul(vecAdd(unpacked.tangents[addTo], tangent), 0.5);
-                unpacked.bitangents[addTo] = vecScalarMul(vecAdd(unpacked.bitangents[addTo], bitangent), 0.5);
+    //            console.log("unpacked.tangents =" + unpacked.tangents[addTo] + "\ntangent =" + tangent + 
+      //                    "\nv =" + v +
+      //                    "\nlocation" + location);
+
+                unpacked.tangents[addTo] = vecAdd(unpacked.tangents[addTo], tangent);
+                unpacked.bitangents[addTo] = vecAdd(unpacked.bitangents[addTo], bitangent);
 
             } else {
                 // create array instance
@@ -471,7 +475,7 @@
     mesh.vertexBuffer.itemSize = 3;
     mesh.vertexBuffer.numItems = mesh.vertices.length / 3;
 
-
+/*
     mesh.tangentBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, mesh.tangentBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.tangents), gl.STATIC_DRAW);
@@ -484,7 +488,7 @@
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.bitangents), gl.STATIC_DRAW);
     mesh.bitangentBuffer.itemSize = 3;
     mesh.bitangentBuffer.numItems = mesh.bitangents.length / 3;
-
+*/
     mesh.indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(mesh.indices), gl.STATIC_DRAW);

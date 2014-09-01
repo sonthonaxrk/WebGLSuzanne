@@ -23,7 +23,6 @@ function mvPopMatrix() {
 
 
 
-
 function WebGL(CID, FSID, VSID) {
 	var canvas = document.getElementById(CID);
     if(!canvas.getContext("webgl") && !canvas.getContext("experimental-webgl")) {
@@ -67,85 +66,97 @@ function WebGL(CID, FSID, VSID) {
 			this.GL.linkProgram(this.ShaderProgram);
 			this.GL.useProgram(this.ShaderProgram);
 
+
 			// link vetex pos attr from shader
-            this.VertexPosition = this.GL.getAttribLocation(this.ShaderProgram, "VertexPosition");
+            this.VertexPosition = this.GL.getAttribLocation(this.ShaderProgram, "aVertexPosition");
             this.GL.enableVertexAttribArray(this.VertexPosition);
 
-            this.VertexNormal = this.GL.getAttribLocation(this.ShaderProgram, "VertexNormal");
+            this.VertexNormal = this.GL.getAttribLocation(this.ShaderProgram, "aVertexNormal");
             this.GL.enableVertexAttribArray(this.VertexNormal);
 
-
-            this.VertexTexture = this.GL.getAttribLocation(this.ShaderProgram, "TextureCoord");
+            this.VertexTexture = this.GL.getAttribLocation(this.ShaderProgram, "aTextureCoord");
             this.GL.enableVertexAttribArray(this.VertexTexture);
-
 
 		}
 	}
 
-    this.Draw = function(Object, Texture) {
-            var VertexBuffer = this.GL.createBuffer(); //Create a New Buffer
-            
-            //Bind it as The Current Buffer
-            this.GL.bindBuffer(this.GL.ARRAY_BUFFER, VertexBuffer); 
-            
-            // Fill it With the Data 
+    this.initBuffer = function(Object) {
+            Object.buffers = {};
+            Object.buffers.vertexBuffer = this.GL.createBuffer();        
+            this.GL.bindBuffer(this.GL.ARRAY_BUFFER, Object.buffers.vertexBuffer); 
             this.GL.bufferData(this.GL.ARRAY_BUFFER, new Float32Array(Object.vertices), this.GL.STATIC_DRAW); 
             
-            //Connect Buffer To Shader's attribute
-            this.GL.vertexAttribPointer(this.VertexPosition, 3, this.GL.FLOAT, false, 0, 0); 
+            Object.buffers.vertexNormalBuffer = this.GL.createBuffer();
+            this.GL.bindBuffer(this.GL.ARRAY_BUFFER, Object.buffers.vertexNormalBuffer);
+            this.GL.bufferData(this.GL.ARRAY_BUFFER, new Float32Array(Object.vertexNormals), this.GL.STATIC_DRAW);
             
-            
-            //Repeat For The next Two
-            var TextureBuffer = this.GL.createBuffer();
-            this.GL.bindBuffer(this.GL.ARRAY_BUFFER, TextureBuffer);
+            Object.buffers.tangentBuffer = this.GL.createBuffer();
+            this.GL.bindBuffer(this.GL.ARRAY_BUFFER, Object.buffers.tangentBuffer);
+            this.GL.bufferData(this.GL.ARRAY_BUFFER, new Float32Array(Object.tangents), this.GL.STATIC_DRAW);
+
+            Object.buffers.bitangentBuffer = this.GL.createBuffer();
+            this.GL.bindBuffer(this.GL.ARRAY_BUFFER, Object.buffers.bitangentBuffer);
+            this.GL.bufferData(this.GL.ARRAY_BUFFER, new Float32Array(Object.bitangents), this.GL.STATIC_DRAW);
+
+
+            Object.buffers.textureBuffer = this.GL.createBuffer();
+            this.GL.bindBuffer(this.GL.ARRAY_BUFFER, Object.buffers.textureBuffer);
             this.GL.bufferData(this.GL.ARRAY_BUFFER, new Float32Array(Object.textures), this.GL.STATIC_DRAW);
-            this.GL.vertexAttribPointer(this.VertexTexture, 2, this.GL.FLOAT, false, 0, 0);
             
 
-            var VertexNormalBuffer = this.GL.createBuffer();
-            this.GL.bindBuffer(this.GL.ARRAY_BUFFER, VertexNormalBuffer);
-            this.GL.bufferData(this.GL.ARRAY_BUFFER, new Float32Array(Object.vertexNormals), this.GL.STATIC_DRAW);
+            Object.buffers.triangleBuffer = this.GL.createBuffer();
+            this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, Object.buffers.triangleBuffer);
+            this.GL.bufferData(this.GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(Object.indices), this.GL.STATIC_DRAW);  
+    }
+
+
+    this.Draw = function (Object) {
+            this.setObjectMatrixUniorms(Object);
+            this.GL.activeTexture(this.GL.TEXTURE0);
+            this.GL.bindTexture(this.GL.TEXTURE_2D, Object.Texture);
+            
+            this.GL.bindBuffer(this.GL.ARRAY_BUFFER, Object.buffers.vertexBuffer); 
+            this.GL.vertexAttribPointer(this.VertexPosition, 3, this.GL.FLOAT, false, 0, 0); 
+
+            this.GL.bindBuffer(this.GL.ARRAY_BUFFER, Object.buffers.vertexNormalBuffer); 
             this.GL.vertexAttribPointer(this.VertexNormal, 3, this.GL.FLOAT, false, 0, 0);
 
+            this.GL.bindBuffer(this.GL.ARRAY_BUFFER, Object.buffers.textureBuffer);
+            this.GL.vertexAttribPointer(this.VertexTexture, 2, this.GL.FLOAT, false, 0, 0);
 
-            var TriangleBuffer = this.GL.createBuffer();
-            this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, TriangleBuffer);
-            this.GL.bufferData(this.GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(Object.indices), this.GL.STATIC_DRAW);
-            
-            
-            //Set slot 0 as the active Texture
-            this.GL.activeTexture(this.GL.TEXTURE0);
-            
-            //Load in the Texture To Memory
-            this.GL.bindTexture(this.GL.TEXTURE_2D, Texture);
-            
-            //Update The Texture Sampler in the fragment shader to use slot 0
-            this.GL.uniform1i(this.GL.getUniformLocation(this.ShaderProgram, "uSampler"), 0);
-            
-            //Set The Perspective and Transformation Matrices
-            var perMatrix = this.GL.getUniformLocation(this.ShaderProgram, "PerspectiveMatrix");  
-            this.GL.uniformMatrix4fv(perMatrix, false, new Float32Array(pMatrix));
-            
-            var normalMatrix = mat3.create();
-            mat4.toInverseMat3(Object.objMatrix, normalMatrix);
-            mat3.transpose(normalMatrix);
-
-
-            var norMatrix = this.GL.getUniformLocation(this.ShaderProgram, "NormalMatrix");  
-            this.GL.uniformMatrix3fv(norMatrix, false, new Float32Array(normalMatrix));
-
-
-
-            var transMatrix = this.GL.getUniformLocation(this.ShaderProgram, "TransformationMatrix");  
-            this.GL.uniformMatrix4fv(transMatrix, false, new Float32Array(Object.objMatrix));  
-            
-            //Draw The Triangles
             this.GL.drawElements(this.GL.TRIANGLES, Object.indices.length, this.GL.UNSIGNED_SHORT, 0);
+    }
+
+
+    this.setObjectMatrixUniorms = function (Object) {
+
+        this.GL.uniform1i(this.GL.getUniformLocation(this.ShaderProgram, "uSampler"), 0);
+        var perMatrix = this.GL.getUniformLocation(this.ShaderProgram, "uViewMatrix");  
+        this.GL.uniformMatrix4fv(perMatrix, false, new Float32Array(pMatrix));       
+                
+        var normalMatrix = mat3.create();
+        mat4.toInverseMat3(Object.objMatrix, normalMatrix);
+        mat3.transpose(normalMatrix);
+
+        var norMatrix = this.GL.getUniformLocation(this.ShaderProgram, "uNormalMatrix");  
+        this.GL.uniformMatrix3fv(norMatrix, false, new Float32Array(normalMatrix));
+
+        var transMatrix = this.GL.getUniformLocation(this.ShaderProgram, "uModelMatrix");  
+        this.GL.uniformMatrix4fv(transMatrix, false, new Float32Array(Object.objMatrix));  
+    } 
+
+    this.setEnviromentUniforms = function () {
+        var uAmbientColor = this.GL.getUniformLocation(this.ShaderProgram, "uAmbientColor");  
+        var uPointLightingLocation = this.GL.getUniformLocation(this.ShaderProgram, "uPointLightingLocation");  
+        var uPointLightingColor = this.GL.getUniformLocation(this.ShaderProgram, "uPointLightingColor");  
+
+        this.GL.uniform3f(uAmbientColor, 0.5, 0.5, 0.5);
+        this.GL.uniform3f(uPointLightingLocation, 2, 2, 2);
+        this.GL.uniform3f(uPointLightingColor, 1, 1, 1);
 
     }
 
     this.LoadTexture = function (img) {
-        //create a new Texure and Assign it as the active one
         var TempTex = this.GL.createTexture();
         this.GL.bindTexture(this.GL.TEXTURE_2D, TempTex);
 
@@ -172,6 +183,7 @@ function WebGL(CID, FSID, VSID) {
     }
 
 
+
 }
 
 function LoadShader(Script) {
@@ -188,21 +200,14 @@ function LoadShader(Script) {
 
 
 
-var GL; 
      
-//Our finished texture
-var Texture;
-     
-//This will hold the textures image 
-var TextureImage;
-var suzzaneDataOBJ;
 var meshes = {}; 
 
 
 function tick() {
     requestAnimFrame(tick);
     animate();
-    GL.Draw(meshes.suzzane, Texture);
+    GL.Draw(meshes.suzzane);
 }
 
 var lastTime = 0;
@@ -217,21 +222,6 @@ function animate() {
 var mouse = new Mouse();
 
 window.onload = function(){
-    var canvas = document.getElementById("GLCanvas");
-    canvas.width = innerWidth;
-    canvas.height = innerHeight;
-
-    
-    window.onmousedown = function () {
-        mouse.handleMouseDown();
-    }
-    window.onmouseup = function () {
-        mouse.handleMouseUp();
-    }
-    // anoymous function to get this to work!
-    window.onmousemove = function () {
-        mouse.handleMouseMove();
-    };
     
 
     OBJ.downloadMeshes({
@@ -243,15 +233,39 @@ window.onload = function(){
         TextureImage = new Image();
 
         TextureImage.onload = function(){
-            Texture = GL.LoadTexture(TextureImage);
-            meshes.suzzane.objMatrix = mat4.identity(mat4.create());
+
+            meshes.suzzane.Texture = GL.LoadTexture(TextureImage);
+            meshes.suzzane.objMatrix = [0.7624991536140442, 0.23857446014881134, -0.601394534111023, 0, -0.3268221318721771, 0.9442471861839294, -0.039787907153367996, 0, 0.5583732724189758, 0.22688810527324677, 0.7979588508605957, 0, 0, 0, 0, 1];
             mat4.translate(pMatrix,  [0.0, 0.0, -5.0]);
-            GL.Draw(meshes.suzzane, Texture);
+
+            GL.setEnviromentUniforms();
+            GL.initBuffer(meshes.suzzane);
+            GL.Draw(meshes.suzzane);
             tick();
 
         };
+
+
         TextureImage.src = "images/ao.png";
     }
+
+
+
+    var canvas = document.getElementById("GLCanvas");
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+
+    
+    window.onmousedown = function () {
+        mouse.handleMouseDown();
+    }
+    window.onmouseup = function () {
+        mouse.handleMouseUp();
+    }
+    window.onmousemove = function () {
+        mouse.handleMouseMove();
+    };
+
 }
 
 function Mouse() {
